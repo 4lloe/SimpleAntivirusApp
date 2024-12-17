@@ -116,6 +116,7 @@ public class AntivirusApp extends Application {
             scanningLabel.setTextFill(Color.WHITE);
             centerPanel.getChildren().add(scanningLabel);
 
+            // Получаем угрозы
             List<String> threats = core.scanDirectory(directory);
 
             Label resultLabel = new Label("Scan complete. Threats found: " + threats.size());
@@ -127,6 +128,7 @@ public class AntivirusApp extends Application {
             }
         }
     }
+
 
     private void showQuarantine() {
         List<String> quarantinedFiles = core.getQuarantinedFiles();

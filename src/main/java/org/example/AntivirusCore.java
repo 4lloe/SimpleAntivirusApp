@@ -1,128 +1,145 @@
 package org.example;
 
-import javax.swing.*;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.FileInputStream;
+import java.security.MessageDigest;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AntivirusCore {
-    private String quarantineDir = "quarantine"; // Папка карантина по умолчанию
-    private List<String> suspiciousExtensions = List.of(".exe", ".bat", ".js"); // Пример подозрительных расширений
-    private List<String> scanReport = new ArrayList<>();
-    private List<String> quarantinedFiles = new ArrayList<>();
+    private static final String DB_URL;
+    private final Connection connection;
 
-    // Метод для сканирования директории
+    static {
+        // Путь к вашей базе данных SQLite
+        DB_URL = "jdbc:sqlite:identifier.sqlite";  // Обновите путь к вашей базе
+    }
+
+    public AntivirusCore() {
+        try {
+            this.connection = DriverManager.getConnection(DB_URL);
+        } catch (SQLException e) {
+            throw new RuntimeException("Database connection error.", e);
+        }
+    }
+
     public List<String> scanDirectory(File directory) {
-        scanReport.clear();
-        quarantinedFiles.clear();
+        List<String> threats = new ArrayList<>();
 
+        // Получаем список всех файлов в директории
         File[] files = directory.listFiles();
         if (files != null) {
             for (File file : files) {
-                if (file.isDirectory()) {
-                    scanDirectory(file);  // Рекурсивный вызов для сканирования вложенных директорий
-                } else {
-                    scanFile(file);
+                if (file.isFile()) {
+                    // Проверяем каждый файл на наличие угроз
+                    if (isFileMalicious(file)) {
+                        threats.add(file.getAbsolutePath());
+                    }
                 }
             }
         }
-
-        return scanReport;
+        return threats;
     }
 
-    // Метод для сканирования отдельного файла
-    private void scanFile(File file) {
-        String fileName = file.getName();
-        if (isSuspicious(fileName)) {
-            quarantineFile(file);
-        } else {
-            scanReport.add("Safe: " + fileName);
-        }
-    }
+    public boolean isFileMalicious(File file) {
+        try {
+            // Загружаем сигнатуры из базы данных
+            List<String> signatures = getSignaturesFromDatabase();
 
-    // Проверка, является ли файл подозрительным
-    private boolean isSuspicious(String fileName) {
-        for (String ext : suspiciousExtensions) {
-            if (fileName.endsWith(ext)) {
-                return true;
+            // Получаем хэш файла
+            String fileHash = getFileHash(file);
+            System.out.println("File hash: " + fileHash);  // Логирование хэша файла
+
+            if (fileHash == null) {
+                return false;
             }
+
+            // Приводим хэш файла к верхнему регистру
+            fileHash = fileHash.toUpperCase();
+
+            // Проверяем хэш файла на наличие совпадений с хэшами в базе данных
+            for (String signature : signatures) {
+                System.out.println("Checking against signature: " + signature);  // Логирование хэшей в базе данных
+
+                // Приводим хэш из базы данных к верхнему регистру
+                if (fileHash.equals(signature.toUpperCase())) {
+                    return true; // Файл является вредоносным
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return false;
     }
 
-    // Метод для помещения файла в карантин
-    private void quarantineFile(File file) {
+
+
+    private String getFileHash(File file) {
         try {
-            // Создание новой директории для карантина, если её нет
-            File quarantineFolder = new File(quarantineDir);
-            if (!quarantineFolder.exists()) {
-                quarantineFolder.mkdirs();
-            }
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            FileInputStream fis = new FileInputStream(file);
+            byte[] byteArray = new byte[1024];
+            int bytesRead = 0;
 
-            File quarantineFile = new File(quarantineFolder, file.getName());
-            Files.copy(file.toPath(), quarantineFile.toPath()); // Копирование файла в карантин
-            quarantinedFiles.add(quarantineFile.getAbsolutePath());
-            scanReport.add("Quarantined: " + file.getName());
-            System.out.println("File quarantined: " + file.getName());
-        } catch (IOException e) {
-            scanReport.add("Error quarantining file: " + file.getName());
+            // Читаем файл и обновляем хэш
+            while ((bytesRead = fis.read(byteArray)) != -1) {
+                digest.update(byteArray, 0, bytesRead);
+            }
+            fis.close();
+
+            // Получаем хэш в виде строки
+            byte[] hashBytes = digest.digest();
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        return null;
     }
 
-    // Метод для получения списка файлов в карантине
+    private List<String> getSignaturesFromDatabase() throws SQLException {
+        List<String> signatures = new ArrayList<>();
+        String sql = "SELECT hash FROM signatures";  // Используем колонку 'hash' для сигнатур
+
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String hash = rs.getString("hash");
+                System.out.println("Signature from DB: " + hash);  // Логирование хэша из базы
+                signatures.add(hash);
+            }
+        }
+        return signatures;
+    }
+
+
     public List<String> getQuarantinedFiles() {
-        return quarantinedFiles;
+        // Реализуем метод для получения списка файлов в карантине
+        return new ArrayList<>();
     }
 
-    // Метод для очистки карантина
     public void clearQuarantine() {
-        for (String filePath : quarantinedFiles) {
-            File file = new File(filePath);
-            if (file.exists()) {
-                file.delete();
-            }
-        }
-        quarantinedFiles.clear();
-        System.out.println("Quarantine cleared.");
+        // Реализуем метод для очистки карантина
     }
 
-    // Метод для получения отчета о сканировании
-    public String getScanReport() {
-        StringBuilder report = new StringBuilder();
-        for (String entry : scanReport) {
-            report.append(entry).append("\n");
-        }
-        return report.toString();
-    }
-
-    // Метод для изменения папки карантина
     public void changeQuarantineFolder() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY); // Разрешаем выбор только папок
-        fileChooser.setDialogTitle("Select Quarantine Folder");
-
-        int result = fileChooser.showOpenDialog(null);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFolder = fileChooser.getSelectedFile();
-            if (selectedFolder != null && selectedFolder.exists() && selectedFolder.isDirectory()) {
-                quarantineDir = selectedFolder.getAbsolutePath();
-                System.out.println("New quarantine folder: " + quarantineDir);
-            } else {
-                System.out.println("Invalid folder selected.");
-            }
-        }
+        // Реализуем метод для изменения папки карантина
     }
 
-    // Метод для получения текущих подозрительных расширений
     public List<String> getSuspiciousExtensions() {
-        return suspiciousExtensions;
+        // Реализуем метод для получения подозрительных расширений
+        return new ArrayList<>();
     }
 
-    // Метод для обновления списка подозрительных расширений
     public void setSuspiciousExtensions(String extensions) {
-        suspiciousExtensions = List.of(extensions.split(",\\s*"));
+        // Реализуем метод для изменения подозрительных расширений
+    }
+
+    public String getScanReport() {
+        // Реализуем метод для получения отчета о сканировании
+        return "Scan Report";
     }
 }
