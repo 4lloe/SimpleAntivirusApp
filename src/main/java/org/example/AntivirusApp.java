@@ -191,11 +191,20 @@ public class AntivirusApp extends Application {
     }
 
     private void showScanReport() {
+        // Получаем отчёт
         String report = core.getScanReport();
+
+        // Создаём TextArea для отображения отчёта
         TextArea reportArea = new TextArea(report);
-        reportArea.setEditable(false);
+        reportArea.setEditable(false); // Текстовое поле только для чтения
+        reportArea.setPrefHeight(400); // Задаем высоту для удобства отображения
+        reportArea.setWrapText(true); // Перенос строк
+
+        // Очищаем центральную панель и добавляем отчёт
+        centerPanel.getChildren().clear();
         centerPanel.getChildren().add(reportArea);
     }
+
 
     private void changeQuarantineFolder() {
         DirectoryChooser directoryChooser = new DirectoryChooser();

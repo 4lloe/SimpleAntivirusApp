@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Date;
 
 public class AntivirusCore {
     private static final String DB_URL;
@@ -139,12 +141,14 @@ public class AntivirusCore {
     }
 
 
-    public void clearQuarantine() {
+    public boolean clearQuarantine() {
         // Реализуем метод для очистки карантина
+        return false;
     }
 
-    public void changeQuarantineFolder(String path) {
+    public boolean changeQuarantineFolder(String path) {
         // Реализуем метод для изменения папки карантина
+        return false;
     }
 
     public List<String> getSuspiciousExtensions() {
@@ -157,7 +161,24 @@ public class AntivirusCore {
     }
 
     public String getScanReport() {
-        // Реализуем метод для получения отчета о сканировании
-        return "Scan Report";
+        StringBuilder report = new StringBuilder();
+
+        // Здесь генерируем отчёт. Например, если были угрозы, добавляем их в отчёт.
+        List<String> threats = getQuarantinedFiles(); // Получаем список угроз (можно использовать уже полученные данные)
+
+        if (threats.isEmpty()) {
+            report.append("No threats detected.\n");
+        } else {
+            report.append("Threats detected:\n");
+            for (String threat : threats) {
+                report.append(threat).append("\n");
+            }
+        }
+
+        // Можно добавить дату сканирования или другие данные
+        report.append("\nScan completed at: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+
+        return report.toString();
     }
+
 }
