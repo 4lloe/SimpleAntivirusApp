@@ -1,51 +1,43 @@
 package org.example;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class QuarantineManager {
-    private static final String QUARANTINE_DIR = "D:\\carantin";
 
-    public boolean clearQuarantine() {
-        try {
-            Files.walk(Paths.get(QUARANTINE_DIR))
-                    .filter(Files::isRegularFile)
-                    .forEach(file -> {
-                        try {
-                            Files.delete(file);
-                            System.out.println("File deleted from quarantine: " + file);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
+    private static final String QUARANTINE_PATH = "D:\\carantin";
 
     public boolean moveFileToQuarantine(File file) {
         try {
-            Path quarantinePath = Paths.get(QUARANTINE_DIR);
-            if (!Files.exists(quarantinePath)) {
-                Files.createDirectories(quarantinePath);
-            }
-
-            String quarantinedFileName = System.currentTimeMillis() + "_" + file.getName();
-            Path destination = Paths.get(QUARANTINE_DIR, quarantinedFileName);
-
-            Files.move(file.toPath(), destination, StandardCopyOption.REPLACE_EXISTING);
-            recordFileInQuarantine(file, quarantinedFileName);
-
+            Files.move(file.toPath(), Paths.get(QUARANTINE_PATH, file.getName()));
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean clearQuarantine() {
+        File quarantineDir = new File(QUARANTINE_PATH);
+        if (quarantineDir.exists() && quarantineDir.isDirectory()) {
+            File[] files = quarantineDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    file.delete();
+                }
+                return true;
+            }
         }
         return false;
     }
 
-    private void recordFileInQuarantine(File file, String quarantinedFileName) {
-        System.out.println("File moved to quarantine: " + quarantinedFileName);
+    public boolean changeQuarantineFolder(String newPath) {
+        File newDir = new File(newPath);
+        if (newDir.exists() && newDir.isDirectory()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }

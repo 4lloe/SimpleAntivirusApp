@@ -15,25 +15,21 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.util.List;
 
-//C:\Users\m4lyi\OneDrive\Рабочий стол\virus.txt\
-
 public class AntivirusApp extends Application {
     private VBox centerPanel;
     private final AntivirusCore core = new AntivirusCore();
+    private BorderPane root;
 
     @Override
     public void start(Stage primaryStage) {
-        BorderPane root = new BorderPane();
+        root = new BorderPane();
 
-        // Левое меню
         VBox menu = createLeftMenu(primaryStage);
 
-        // Центральная панель по умолчанию
         centerPanel = createDashboard();
 
         root.setLeft(menu);
         root.setCenter(centerPanel);
-
         root.setBackground(new Background(new BackgroundFill(Color.rgb(52, 115, 93), CornerRadii.EMPTY, Insets.EMPTY)));
 
         Scene scene = new Scene(root, 900, 600);
@@ -118,7 +114,6 @@ public class AntivirusApp extends Application {
             scanningLabel.setTextFill(Color.WHITE);
             centerPanel.getChildren().add(scanningLabel);
 
-            // Получаем угрозы
             List<String> threats = core.scanDirectory(directory);
 
             Label resultLabel = new Label("Scan complete. Threats found: " + threats.size());
@@ -145,78 +140,42 @@ public class AntivirusApp extends Application {
         }
     }
 
-
-    public boolean clearQuarantine() {
-        File quarantineDir = new File("D:\\carantin"); // Директория карантина
-        if (!quarantineDir.exists() || !quarantineDir.isDirectory()) {
-            System.out.println("Quarantine directory does not exist or is not a directory.");
-            return false;
-        }
-
-        boolean success = true;
-        File[] files = quarantineDir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isFile() && !file.delete()) { // Пытаемся удалить файл
-                    success = false;
-                    System.out.println("Failed to delete file: " + file.getAbsolutePath());
-                }
-            }
-        }
-        System.out.println("Quarantine cleared");
-        return success;
+    private void clearQuarantine() {
+        boolean success = core.clearQuarantine();
+        Label resultLabel = new Label(success ? "Quarantine cleared." : "Failed to clear quarantine.");
+        resultLabel.setTextFill(Color.WHITE);
+        centerPanel.getChildren().add(resultLabel);
     }
-
 
     private void showSettings() {
         Label settingsTitle = new Label("Settings");
         settingsTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
         settingsTitle.setTextFill(Color.WHITE);
 
-        Button changeQuarantineFolder = new Button("Change Quarantine Folder");
-        changeQuarantineFolder.setOnAction(e -> changeQuarantineFolder());
+        Button changeBackgroundButton = new Button("Change Background Color");
+        changeBackgroundButton.setOnAction(e -> changeBackgroundColor());
 
-        Label extensionLabel = new Label("Suspicious File Extensions (comma-separated):");
-        extensionLabel.setTextFill(Color.WHITE);
-
-        TextField extensionsField = new TextField(String.join(", ", core.getSuspiciousExtensions()));
-        Button saveButton = new Button("Save Extensions");
-        saveButton.setOnAction(e -> core.setSuspiciousExtensions(extensionsField.getText()));
-
-        VBox settingsPanel = new VBox(10, settingsTitle, changeQuarantineFolder, extensionLabel, extensionsField, saveButton);
+        VBox settingsPanel = new VBox(10, settingsTitle, changeBackgroundButton);
         settingsPanel.setAlignment(Pos.CENTER_LEFT);
         settingsPanel.setPadding(new Insets(20));
 
         centerPanel.getChildren().add(settingsPanel);
     }
 
-    private void showScanReport() {
-        // Получаем отчёт
-        String report = core.getScanReport();
-
-        // Создаём TextArea для отображения отчёта
-        TextArea reportArea = new TextArea(report);
-        reportArea.setEditable(false); // Текстовое поле только для чтения
-        reportArea.setPrefHeight(400); // Задаем высоту для удобства отображения
-        reportArea.setWrapText(true); // Перенос строк
-
-        // Очищаем центральную панель и добавляем отчёт
-        centerPanel.getChildren().clear();
-        centerPanel.getChildren().add(reportArea);
+    private void changeBackgroundColor() {
+        root.setBackground(new Background(new BackgroundFill(Color.rgb(38, 40, 54), CornerRadii.EMPTY, Insets.EMPTY)));
     }
 
+    private void showScanReport() {
+        String report = core.getScanReport();
 
-    private void changeQuarantineFolder() {
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle("Select New Quarantine Folder");
-        File directory = directoryChooser.showDialog(null);
+        TextArea reportArea = new TextArea(report);
+        reportArea.setEditable(false);
+        reportArea.setPrefHeight(400);
+        reportArea.setWrapText(true);
 
-        if (directory != null) {
-            core.changeQuarantineFolder(directory.getPath());
-            Label newFolderLabel = new Label("New quarantine folder set: " + directory.getPath());
-            newFolderLabel.setTextFill(Color.WHITE);
-            centerPanel.getChildren().add(newFolderLabel);
-        }
+        centerPanel.getChildren().clear();
+        centerPanel.getChildren().add(reportArea);
     }
 
     public static void main(String[] args) {
