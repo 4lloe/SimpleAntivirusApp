@@ -15,6 +15,8 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.util.List;
 
+//C:\Users\m4lyi\OneDrive\Рабочий стол\virus.txt\
+
 public class AntivirusApp extends Application {
     private VBox centerPanel;
     private final AntivirusCore core = new AntivirusCore();
@@ -129,24 +131,42 @@ public class AntivirusApp extends Application {
         }
     }
 
-
     private void showQuarantine() {
+        centerPanel.getChildren().clear();
         List<String> quarantinedFiles = core.getQuarantinedFiles();
         Label quarantineLabel = new Label("Quarantined Files:");
         quarantineLabel.setTextFill(Color.WHITE);
         centerPanel.getChildren().add(quarantineLabel);
 
         for (String file : quarantinedFiles) {
-            centerPanel.getChildren().add(new Label(file));
+            Label fileLabel = new Label(file);
+            fileLabel.setTextFill(Color.LIGHTGRAY);
+            centerPanel.getChildren().add(fileLabel);
         }
     }
 
-    private void clearQuarantine() {
-        core.clearQuarantine();
-        Label clearedLabel = new Label("Quarantine Cleared!");
-        clearedLabel.setTextFill(Color.WHITE);
-        centerPanel.getChildren().add(clearedLabel);
+
+    public boolean clearQuarantine() {
+        File quarantineDir = new File("D:\\carantin"); // Директория карантина
+        if (!quarantineDir.exists() || !quarantineDir.isDirectory()) {
+            System.out.println("Quarantine directory does not exist or is not a directory.");
+            return false;
+        }
+
+        boolean success = true;
+        File[] files = quarantineDir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile() && !file.delete()) { // Пытаемся удалить файл
+                    success = false;
+                    System.out.println("Failed to delete file: " + file.getAbsolutePath());
+                }
+            }
+        }
+        System.out.println("Quarantine cleared");
+        return success;
     }
+
 
     private void showSettings() {
         Label settingsTitle = new Label("Settings");
@@ -154,7 +174,7 @@ public class AntivirusApp extends Application {
         settingsTitle.setTextFill(Color.WHITE);
 
         Button changeQuarantineFolder = new Button("Change Quarantine Folder");
-        changeQuarantineFolder.setOnAction(e -> core.changeQuarantineFolder());
+        changeQuarantineFolder.setOnAction(e -> changeQuarantineFolder());
 
         Label extensionLabel = new Label("Suspicious File Extensions (comma-separated):");
         extensionLabel.setTextFill(Color.WHITE);
@@ -175,6 +195,19 @@ public class AntivirusApp extends Application {
         TextArea reportArea = new TextArea(report);
         reportArea.setEditable(false);
         centerPanel.getChildren().add(reportArea);
+    }
+
+    private void changeQuarantineFolder() {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Select New Quarantine Folder");
+        File directory = directoryChooser.showDialog(null);
+
+        if (directory != null) {
+            core.changeQuarantineFolder(directory.getPath());
+            Label newFolderLabel = new Label("New quarantine folder set: " + directory.getPath());
+            newFolderLabel.setTextFill(Color.WHITE);
+            centerPanel.getChildren().add(newFolderLabel);
+        }
     }
 
     public static void main(String[] args) {

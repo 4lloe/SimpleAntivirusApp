@@ -26,21 +26,28 @@ public class AntivirusCore {
 
     public List<String> scanDirectory(File directory) {
         List<String> threats = new ArrayList<>();
+        QuarantineManager quarantineManager = new QuarantineManager();
 
-        // Получаем список всех файлов в директории
         File[] files = directory.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.isFile()) {
-                    // Проверяем каждый файл на наличие угроз
                     if (isFileMalicious(file)) {
                         threats.add(file.getAbsolutePath());
+                        // Перемещаем файл в карантин
+                        if (quarantineManager.moveFileToQuarantine(file)) {
+                            System.out.println("File quarantined: " + file.getAbsolutePath());
+                        } else {
+                            System.out.println("Failed to quarantine file: " + file.getAbsolutePath());
+                        }
                     }
                 }
             }
         }
         return threats;
     }
+
+
 
     public boolean isFileMalicious(File file) {
         try {
@@ -117,15 +124,26 @@ public class AntivirusCore {
 
 
     public List<String> getQuarantinedFiles() {
-        // Реализуем метод для получения списка файлов в карантине
-        return new ArrayList<>();
+        List<String> quarantinedFiles = new ArrayList<>();
+        File quarantineDir = new File("D:\\carantin"); // Убедитесь, что путь совпадает с QuarantineManager
+
+        if (quarantineDir.exists() && quarantineDir.isDirectory()) {
+            File[] files = quarantineDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    quarantinedFiles.add(file.getAbsolutePath());
+                }
+            }
+        }
+        return quarantinedFiles;
     }
+
 
     public void clearQuarantine() {
         // Реализуем метод для очистки карантина
     }
 
-    public void changeQuarantineFolder() {
+    public void changeQuarantineFolder(String path) {
         // Реализуем метод для изменения папки карантина
     }
 
